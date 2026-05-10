@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <project>
 
-	<app title="Friday Night Funkin' Forever Engine" file="Forever Engine" packageName="com.ninjamuffin99.funkin"
-		package="com.ninjamuffin99.funkin" main="Main" version="0.2.7.1" company="ninjamuffin99" />
+	<app title="Friday Night Funkin' Forever Extended" file="ForeverExtended" packageName="com.brenninho.fe"
+		package="com.brenninbo.fe" main="Main" version="0.2.7.1" company="Brenninho" />
 
 	<app preloader="flixel.system.FlxPreloader" />
 
