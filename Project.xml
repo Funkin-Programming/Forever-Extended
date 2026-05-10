@@ -29,18 +29,8 @@
 
 	<source path="source" />
 
-	<assets path="assets" rename="assets" />
-	<assets path="assets/images" rename="assets/images" include="*.png|*.jpg|*.atlas" />
-	<assets path="assets/sounds" rename="assets/sounds" include="*.ogg" if="!web" />
-	<assets path="assets/sounds" rename="assets/sounds" include="*.mp3" if="web" />
-	<assets path="assets/music" rename="assets/music" include="*.ogg" if="!web" />
-	<assets path="assets/music" rename="assets/music" include="*.mp3" if="web" />
-	<assets path="assets/songs" rename="assets/songs" include="*.ogg" if="!web" />
-	<assets path="assets/songs" rename="assets/songs" include="*.mp3" if="web" />
-	<assets path="assets/data" rename="assets/data" include="*.json|*.xml|*.txt|*.hx|*.lua" />
-	<assets path="assets/fonts" rename="assets/fonts" />
-	<assets path="assets/videos" rename="assets/videos" include="*.mp4" if="desktop" />
-	<assets path="assets/shaders" rename="assets/shaders" include="*.frag|*.vert" />
+	<assets path="assets" rename="assets" exclude="*.ogg" if="web" />
+	<assets path="assets" rename="assets" exclude="*.mp3" if="!web" />
 
 	<assets path="FE-CrashDialog.exe" type="template" if="windows release" />
 
