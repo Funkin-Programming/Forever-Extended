@@ -28,6 +28,8 @@ import sys.io.Process;
 import lime.system.System as LimeSystem;
 #end
 
+using StringTools;
+
 typedef WeekData =
 {
 	var songs:Array<String>;
@@ -38,66 +40,31 @@ typedef WeekData =
 
 class Main extends Sprite
 {
-	public static inline final GAME_WIDTH:Int = 1280;
-	public static inline final GAME_HEIGHT:Int = 720;
-	public static inline final VERSION:String = '0.2.7.1';
-	public static inline final REPO_URL:String = 'https://github.com/Funkin-Programming/Forever-Extended';
+	public static inline final GAME_WIDTH:Int    = 1280;
+	public static inline final GAME_HEIGHT:Int   = 720;
+	public static inline final VERSION:String    = '0.2.7.1';
+	public static inline final REPO_URL:String   = 'https://github.com/Funkin-Programming/Forever-Extended';
 
 	public static inline final FRAMERATE_DEFAULT:Int = 120;
-	public static inline final FRAMERATE_MOBILE:Int = 60;
-	public static inline final FRAMERATE_MIN:Int = 30;
-	public static inline final FRAMERATE_MAX:Int = 360;
+	public static inline final FRAMERATE_MOBILE:Int  = 60;
+	public static inline final FRAMERATE_MIN:Int     = 30;
+	public static inline final FRAMERATE_MAX:Int     = 360;
 
-	public static var framerate:Int = FRAMERATE_DEFAULT;
+	public static var framerate:Int              = FRAMERATE_DEFAULT;
 	public static var mainClassState:Class<FlxState> = Init;
 	public static var lastState:FlxState;
-	public static var storageDirectory:String = '';
-	public static var crashDirectory:String = '';
-	public static var initialized:Bool = false;
+	public static var storageDirectory:String    = '';
+	public static var crashDirectory:String      = '';
+	public static var initialized:Bool           = false;
 
-	public static var gameWeeks:Array<WeekData> = [
-		{
-			songs: ['Tutorial'],
-			characters: ['gf'],
-			color: FlxColor.fromRGB(129, 100, 223),
-			name: 'Funky Beginnings'
-		},
-		{
-			songs: ['Bopeebo', 'Fresh', 'Dadbattle'],
-			characters: ['dad', 'dad', 'dad'],
-			color: FlxColor.fromRGB(129, 100, 223),
-			name: 'vs. DADDY DEAREST'
-		},
-		{
-			songs: ['Spookeez', 'South', 'Monster'],
-			characters: ['spooky', 'spooky', 'monster'],
-			color: FlxColor.fromRGB(30, 45, 60),
-			name: 'Spooky Month'
-		},
-		{
-			songs: ['Pico', 'Philly-Nice', 'Blammed'],
-			characters: ['pico', 'pico', 'pico'],
-			color: FlxColor.fromRGB(111, 19, 60),
-			name: 'vs. Pico'
-		},
-		{
-			songs: ['Satin-Panties', 'High', 'Milf'],
-			characters: ['mom', 'mom', 'mom'],
-			color: FlxColor.fromRGB(203, 113, 170),
-			name: 'MOMMY MUST MURDER'
-		},
-		{
-			songs: ['Cocoa', 'Eggnog', 'Winter-Horrorland'],
-			characters: ['parents-christmas', 'parents-christmas', 'monster-christmas'],
-			color: FlxColor.fromRGB(141, 165, 206),
-			name: 'RED SNOW'
-		},
-		{
-			songs: ['Senpai', 'Roses', 'Thorns'],
-			characters: ['senpai', 'senpai', 'spirit'],
-			color: FlxColor.fromRGB(206, 106, 169),
-			name: 'hating simulator ft. moawling'
-		},
+	public static var gameWeeks:Array<WeekData>  = [
+		{songs: ['Tutorial'],                                           characters: ['gf'],                                                    color: FlxColor.fromRGB(129, 100, 223), name: 'Funky Beginnings'},
+		{songs: ['Bopeebo', 'Fresh', 'Dadbattle'],                      characters: ['dad', 'dad', 'dad'],                                     color: FlxColor.fromRGB(129, 100, 223), name: 'vs. DADDY DEAREST'},
+		{songs: ['Spookeez', 'South', 'Monster'],                       characters: ['spooky', 'spooky', 'monster'],                           color: FlxColor.fromRGB(30,  45,  60),  name: 'Spooky Month'},
+		{songs: ['Pico', 'Philly-Nice', 'Blammed'],                     characters: ['pico', 'pico', 'pico'],                                  color: FlxColor.fromRGB(111, 19,  60),  name: 'vs. Pico'},
+		{songs: ['Satin-Panties', 'High', 'Milf'],                      characters: ['mom', 'mom', 'mom'],                                     color: FlxColor.fromRGB(203, 113, 170), name: 'MOMMY MUST MURDER'},
+		{songs: ['Cocoa', 'Eggnog', 'Winter-Horrorland'],               characters: ['parents-christmas', 'parents-christmas', 'monster-christmas'], color: FlxColor.fromRGB(141, 165, 206), name: 'RED SNOW'},
+		{songs: ['Senpai', 'Roses', 'Thorns'],                          characters: ['senpai', 'senpai', 'spirit'],                            color: FlxColor.fromRGB(206, 106, 169), name: 'hating simulator ft. moawling'},
 	];
 
 	private var infoCounter:InfoHud;
@@ -108,14 +75,12 @@ class Main extends Sprite
 	public function new()
 	{
 		super();
-
 		resolveStoragePaths();
 		registerErrorHandler();
 		resolveFramerate();
 		setupStage();
 		mountGame();
 		bootSystems();
-
 		initialized = true;
 	}
 
@@ -123,23 +88,20 @@ class Main extends Sprite
 	{
 		#if (android || ios)
 		storageDirectory = LimeSystem.applicationStorageDirectory;
-		if (!storageDirectory.endsWith('/'))
-			storageDirectory += '/';
 		#elseif sys
 		storageDirectory = Sys.getCwd();
-		if (!storageDirectory.endsWith('/') && !storageDirectory.endsWith('\\'))
-			storageDirectory += '/';
 		#else
 		storageDirectory = './';
 		#end
+
+		if (!storageDirectory.endsWith('/') && !storageDirectory.endsWith('\\'))
+			storageDirectory += '/';
 
 		crashDirectory = storageDirectory + 'crash/';
 	}
 
 	private function registerErrorHandler():Void
-	{
 		Lib.current.loaderInfo.uncaughtErrorEvents.addEventListener(UncaughtErrorEvent.UNCAUGHT_ERROR, onCrash);
-	}
 
 	private function resolveFramerate():Void
 	{
@@ -154,7 +116,7 @@ class Main extends Sprite
 			return;
 
 		stage.scaleMode = StageScaleMode.NO_SCALE;
-		stage.align = StageAlign.TOP_LEFT;
+		stage.align     = StageAlign.TOP_LEFT;
 
 		#if mobile
 		stage.quality = openfl.display.StageQuality.LOW;
@@ -163,17 +125,11 @@ class Main extends Sprite
 
 	private function mountGame():Void
 	{
-		var stageWidth:Int = Lib.current.stage.stageWidth;
-		var stageHeight:Int = Lib.current.stage.stageHeight;
+		var sw:Int   = Lib.current.stage.stageWidth;
+		var sh:Int   = Lib.current.stage.stageHeight;
+		var zoom:Float = Math.min(sw / GAME_WIDTH, sh / GAME_HEIGHT);
 
-		var ratioX:Float = stageWidth / GAME_WIDTH;
-		var ratioY:Float = stageHeight / GAME_HEIGHT;
-		var zoom:Float = Math.min(ratioX, ratioY);
-
-		var scaledWidth:Int = Math.ceil(stageWidth / zoom);
-		var scaledHeight:Int = Math.ceil(stageHeight / zoom);
-
-		var game:FlxGame = new FlxGame(scaledWidth, scaledHeight, mainClassState, zoom, framerate, framerate, true);
+		var game = new FlxGame(Math.ceil(sw / zoom), Math.ceil(sh / zoom), mainClassState, zoom, framerate, framerate, true);
 		addChild(game);
 
 		infoCounter = new InfoHud(10, 3, 0xFFFFFF, true);
@@ -186,13 +142,12 @@ class Main extends Sprite
 		Discord.initializeRPC();
 		Discord.changePresence('');
 		#end
-
 		PlayerSettings.init();
 	}
 
 	public static function switchState(from:FlxState, to:FlxState):Void
 	{
-		lastState = from;
+		lastState      = from;
 		mainClassState = Type.getClass(to);
 		FlxG.switchState(to);
 	}
@@ -213,18 +168,18 @@ class Main extends Sprite
 		if (target > FlxG.updateFramerate)
 		{
 			FlxG.updateFramerate = target;
-			FlxG.drawFramerate = target;
+			FlxG.drawFramerate   = target;
 		}
 		else
 		{
-			FlxG.drawFramerate = target;
+			FlxG.drawFramerate   = target;
 			FlxG.updateFramerate = target;
 		}
 
 		framerate = target;
 	}
 
-	public static function framerateAdjust(input:Float):Float
+	public static inline function framerateAdjust(input:Float):Float
 		return input * (60.0 / FlxG.drawFramerate);
 
 	public static function dumpCache():Void
@@ -240,7 +195,6 @@ class Main extends Sprite
 				obj.destroy();
 			}
 		}
-
 		Assets.cache.clear('songs');
 		FlxG.sound.destroySounds();
 	}
@@ -258,69 +212,65 @@ class Main extends Sprite
 	}
 
 	public static function playSound(key:String, volume:Float = 1.0, ?onComplete:Void->Void):FlxSound
-	{
 		return FlxG.sound.play(Paths.sound(key), volume, false, null, true, onComplete);
-	}
 
 	private function onCrash(e:UncaughtErrorEvent):Void
 	{
-		var callStack:Array<StackItem> = CallStack.exceptionStack(true);
-		var errLines:Array<String> = [];
+		var lines:Array<String> = [];
 
-		for (item in callStack)
+		for (item in CallStack.exceptionStack(true))
 		{
 			switch (item)
 			{
 				case FilePos(_, file, line, _):
-					errLines.push('  $file (line $line)');
+					lines.push('  $file (line $line)');
 				default:
 			}
 		}
 
 		var header:String = '=== Forever Extended $VERSION Crash Report ===';
-		var footer:String = StringTools.lpad('', '=', header.length);
+		var sep:String    = StringTools.lpad('', '=', header.length);
 
-		errLines.unshift('');
-		errLines.unshift(header);
-		errLines.push('');
-		errLines.push('Uncaught Error: ${e.error}');
-		errLines.push('');
-		errLines.push('Please report this at: $REPO_URL');
-		errLines.push(footer);
+		lines.unshift('');
+		lines.unshift(header);
+		lines.push('');
+		lines.push('Uncaught Error: ${e.error}');
+		lines.push('');
+		lines.push('Please report this at: $REPO_URL');
+		lines.push(sep);
 
-		var errMsg:String = errLines.join('\n');
+		var msg:String = lines.join('\n');
 
 		#if sys
 		try
 		{
-			var stamp:String = DateTools.format(Date.now(), '%Y-%m-%d_%H-%M-%S');
+			var stamp:String   = DateTools.format(Date.now(), '%Y-%m-%d_%H-%M-%S');
 			var logPath:String = crashDirectory + 'FE_$stamp.txt';
 
 			if (!FileSystem.exists(crashDirectory))
 				FileSystem.createDirectory(crashDirectory);
 
-			File.saveContent(logPath, errMsg + '\n');
+			File.saveContent(logPath, msg + '\n');
 
 			#if desktop
-			var dialogPath:String = storageDirectory + 'FE-CrashDialog';
+			var dialog:String = storageDirectory + 'FE-CrashDialog';
 			#if windows
-			dialogPath += '.exe';
+			dialog += '.exe';
 			#end
-
-			if (FileSystem.exists(dialogPath))
-				new Process(dialogPath, [logPath]);
+			if (FileSystem.exists(dialog))
+				new Process(dialog, [logPath]);
 			else
-				Application.current.window.alert(errMsg, 'Crash — Forever Extended $VERSION');
+				Application.current.window.alert(msg, 'Crash — Forever Extended $VERSION');
 			#else
-			Application.current.window.alert(errMsg, 'Crash — Forever Extended $VERSION');
+			Application.current.window.alert(msg, 'Crash — Forever Extended $VERSION');
 			#end
 		}
 		catch (err:Dynamic)
 		{
-			Application.current.window.alert('$errMsg\n\n[Crash logger also failed: $err]', 'Crash — Forever Extended $VERSION');
+			Application.current.window.alert('$msg\n\n[Logger failed: $err]', 'Crash — Forever Extended $VERSION');
 		}
 		#else
-		Application.current.window.alert(errMsg, 'Crash — Forever Extended $VERSION');
+		Application.current.window.alert(msg, 'Crash — Forever Extended $VERSION');
 		#end
 
 		#if sys
