@@ -1,79 +1,152 @@
 package meta.data.dependency;
 
-#if !html5
+#if desktop
 import discord_rpc.DiscordRpc;
-#end
 import lime.app.Application;
+import sys.thread.Thread;
 
-/**
-	Discord Rich Presence, both heavily based on Izzy Engine and the base game's, as well as with a lot of help 
-	from the creator of izzy engine because I'm dummy and dont know how to program discord
-**/
 class Discord
 {
-	#if !html5
-	// set up the rich presence initially
-	public static function initializeRPC()
-	{
-		DiscordRpc.start({
-			clientID: "879525344128925717",
-			onReady: onReady,
-			onError: onError,
-			onDisconnected: onDisconnected
-		});
+	static inline final CLIENT_ID:String = '879525344128925717';
+	static inline final LARGE_IMAGE_KEY:String = 'iconog';
+	static inline final LARGE_IMAGE_TEXT:String = 'Forever Extended';
 
-		// THANK YOU GEDE
-		Application.current.window.onClose.add(shutdownRPC);
+	public static var isInitialized:Bool = false;
+	public static var isShuttingDown:Bool = false;
+
+	static var currentDetails:String = '';
+	static var currentState:String = '';
+
+	public static function initializeRPC():Void
+	{
+		if (isInitialized)
+			return;
+
+		try
+		{
+			DiscordRpc.start({
+				clientID: CLIENT_ID,
+				onReady: onReady,
+				onError: onError,
+				onDisconnected: onDisconnected
+			});
+
+			isInitialized = true;
+
+			Application.current.window.onClose.add(shutdownRPC);
+
+			Thread.create(() ->
+			{
+				while (!isShuttingDown)
+				{
+					DiscordRpc.process();
+					Sys.sleep(2);
+				}
+			});
+		}
+		catch (e:Dynamic)
+		{
+			isInitialized = false;
+		}
 	}
 
-	// from the base game
-	static function onReady()
+	static function onReady():Void
 	{
 		DiscordRpc.presence({
-			details: "",
+			details: 'Starting up...',
 			state: null,
-			largeImageKey: 'iconog',
-			largeImageText: "Forever Engine"
+			largeImageKey: LARGE_IMAGE_KEY,
+			largeImageText: LARGE_IMAGE_TEXT
 		});
 	}
 
-	static function onError(_code:Int, _message:String)
+	static function onError(code:Int, message:String):Void
 	{
-		trace('Error! $_code : $_message');
+		isInitialized = false;
 	}
 
-	static function onDisconnected(_code:Int, _message:String)
+	static function onDisconnected(code:Int, message:String):Void
 	{
-		trace('Disconnected! $_code : $_message');
+		isInitialized = false;
 	}
 
-	//
-
-	public static function changePresence(details:String = '', state:Null<String> = '', ?smallImageKey:String, ?hasStartTimestamp:Bool, ?endTimestamp:Float)
+	public static function changePresence(details:String = '', ?state:String, ?smallImageKey:String, ?smallImageText:String, ?hasStartTimestamp:Bool, ?endTimestamp:Float):Void
 	{
-		var startTimestamp:Float = (hasStartTimestamp) ? Date.now().getTime() : 0;
+		if (!isInitialized || isShuttingDown)
+			return;
 
-		if (endTimestamp > 0)
-			endTimestamp = startTimestamp + endTimestamp;
+		currentDetails = details;
+		currentState = state ?? '';
 
-		DiscordRpc.presence({
-			details: details,
-			state: state,
-			largeImageKey: 'iconog',
-			largeImageText: "Forever Engine",
-			smallImageKey: smallImageKey,
-			// Obtained times are in milliseconds so they are divided so Discord can use it
-			startTimestamp: Std.int(startTimestamp / 1000),
-			endTimestamp: Std.int(endTimestamp / 1000)
-		});
+		var startTimestamp:Int = 0;
+		var endTimestampInt:Int = 0;
 
-		// trace('Discord RPC Updated. Arguments: $details, $state, $smallImageKey, $hasStartTimestamp, $endTimestamp');
+		if (hasStartTimestamp == true)
+		{
+			startTimestamp = Std.int(Date.now().getTime() / 1000);
+
+			if (endTimestamp != null && endTimestamp > 0)
+				endTimestampInt = startTimestamp + Std.int(endTimestamp);
+		}
+
+		try
+		{
+			DiscordRpc.presence({
+				details: currentDetails,
+				state: currentState,
+				largeImageKey: LARGE_IMAGE_KEY,
+				largeImageText: LARGE_IMAGE_TEXT,
+				smallImageKey: smallImageKey ?? '',
+				smallImageText: smallImageText ?? '',
+				startTimestamp: startTimestamp,
+				endTimestamp: endTimestampInt
+			});
+		}
+		catch (e:Dynamic) {}
 	}
 
-	public static function shutdownRPC()
+	public static function clearPresence():Void
 	{
-		// borrowed from izzy engine -- somewhat, at least
-		DiscordRpc.shutdown();
+		if (!isInitialized || isShuttingDown)
+			return;
+
+		try
+		{
+			DiscordRpc.presence({
+				details: '',
+				state: null,
+				largeImageKey: LARGE_IMAGE_KEY,
+				largeImageText: LARGE_IMAGE_TEXT
+			});
+		}
+		catch (e:Dynamic) {}
 	}
-	#end
+
+	public static function shutdownRPC():Void
+	{
+		if (!isInitialized || isShuttingDown)
+			return;
+
+		isShuttingDown = true;
+
+		try
+		{
+			DiscordRpc.shutdown();
+		}
+		catch (e:Dynamic) {}
+
+		isInitialized = false;
+	}
 }
+#else
+class Discord
+{
+	public static var isInitialized:Bool = false;
+	public static var isShuttingDown:Bool = false;
+
+	public static function initializeRPC():Void {}
+	public static function changePresence(details:String = '', ?state:String, ?smallImageKey:String, ?smallImageText:String, ?hasStartTimestamp:Bool, ?endTimestamp:Float):Void {}
+	public static function clearPresence():Void {}
+	public static function shutdownRPC():Void {}
+}
+#end
