@@ -1,179 +1,188 @@
 package;
 
-/*
-	Aw hell yeah! something I can actually work on!
- */
 import flixel.FlxG;
 import flixel.graphics.frames.FlxAtlasFrames;
 import meta.CoolUtil;
+import openfl.Assets as OpenFlAssets;
 import openfl.utils.AssetType;
-import openfl.utils.Assets as OpenFlAssets;
+#if sys
 import sys.FileSystem;
 import sys.io.File;
+#end
 
 class Paths
 {
-	// Here we set up the paths class. This will be used to
-	// Return the paths of assets and call on those assets as well.
-	inline public static var SOUND_EXT = "ogg";
+	#if web
+	public static inline final SOUND_EXT:String = "mp3";
+	#else
+	public static inline final SOUND_EXT:String = "ogg";
+	#end
 
-	// level we're loading
-	static var currentLevel:String;
+	public static inline final IMAGE_EXT:String = "png";
+	public static inline final VIDEO_EXT:String = "mp4";
 
-	// set the current level top the condition of this function if called
-	static public function setCurrentLevel(name:String)
+	static var currentLevel:String = "";
+	static var pathCache:Map<String, String> = [];
+
+	public static function setCurrentLevel(name:String):Void
 	{
 		currentLevel = name.toLowerCase();
+		pathCache.clear();
 	}
 
-	//
-	static function getPath(file:String, type:AssetType, library:Null<String>)
+	public static function clearCache():Void
+		pathCache.clear();
+
+	static function resolve(file:String, type:AssetType, ?library:String):String
 	{
-		/*
-				Okay so, from what I understand, this loads in the current path based on the level
-				we're in (if a library is not specified), say like week 1 or something, 
-				then checks if the assets you're looking for are there.
-				if not, it checks the shared assets folder.
-			// */
+		var cacheKey:String = '${library ?? ""}:$file';
+		if (pathCache.exists(cacheKey))
+			return pathCache.get(cacheKey);
 
-		// well I'm rewriting it so that the library is the path and it looks for the file type
-		// later lmao I don't really wanna rn
+		var resolved:String = _resolve(file, type, library);
+		pathCache.set(cacheKey, resolved);
+		return resolved;
+	}
 
+	static function _resolve(file:String, type:AssetType, ?library:String):String
+	{
 		if (library != null)
-			return getLibraryPath(file, library);
+			return libraryPath(file, library);
 
-		/*
-			if (currentLevel != null)
-			{
-				levelPath = getLibraryPathForce(file, currentLevel);
-				if (OpenFlAssets.exists(levelPath, type))
-					return levelPath;
-
-				levelPath = getLibraryPathForce(file, "shared");
-				if (OpenFlAssets.exists(levelPath, type))
-					return levelPath;
-		}*/
-
-		var levelPath = getLibraryPathForce(file, "mods");
-		if (OpenFlAssets.exists(levelPath, type))
-			return levelPath;
-
-		return getPreloadPath(file);
-	}
-
-	// files!
-	// this is how I'm gonna do it, considering it's much cleaner in my opinion
-
-	/*
-		inline static public function returnFileType(fileName:String, ?library:String, fileExtension:String)
+		#if sys
+		if (currentLevel != "")
 		{
-			// I don't really use haxe so bare with me
-			var returnFile:String = "$" + fileName + "." + fileExtension;
-			return getPath()
-	}//*/
-	/*  
-		actually I could just combine all of these main functions into one and really call it a day
-		it's similar and would use one function with a switch case
-		for now I'm more focused on getting this to run than anything and I'll clean out the code later as I do want to organise
-		everything later 
-	 */
-	static public function getLibraryPath(file:String, library = "preload")
-	{
-		return if (library == "preload" || library == "default") getPreloadPath(file); else getLibraryPathForce(file, library);
+			var levelPath:String = forcePath(file, currentLevel);
+			if (OpenFlAssets.exists(levelPath, type))
+				return levelPath;
+
+			var sharedPath:String = forcePath(file, "shared");
+			if (OpenFlAssets.exists(sharedPath, type))
+				return sharedPath;
+		}
+
+		var modPath:String = forcePath(file, "mods");
+		if (OpenFlAssets.exists(modPath, type))
+			return modPath;
+		#end
+
+		return preloadPath(file);
 	}
 
-	inline static function getLibraryPathForce(file:String, library:String)
+	public static function libraryPath(file:String, library:String = "preload"):String
 	{
+		return switch (library)
+		{
+			case "preload" | "default": preloadPath(file);
+			default: forcePath(file, library);
+		}
+	}
+
+	inline static function forcePath(file:String, library:String):String
 		return '$library/$file';
-	}
 
-	inline static function getPreloadPath(file:String)
-	{
+	inline static function preloadPath(file:String):String
 		return 'assets/$file';
+
+	public static function fileExists(path:String, type:AssetType):Bool
+	{
+		#if sys
+		return FileSystem.exists(path) || OpenFlAssets.exists(path, type);
+		#else
+		return OpenFlAssets.exists(path, type);
+		#end
 	}
 
-	inline static public function file(file:String, type:AssetType = TEXT, ?library:String)
+	public static function getContent(path:String):String
 	{
-		return getPath(file, type, library);
+		#if sys
+		if (FileSystem.exists(path))
+			return File.getContent(path);
+		#end
+		if (OpenFlAssets.exists(path, TEXT))
+			return OpenFlAssets.getText(path);
+		return "";
 	}
 
-	inline static public function txt(key:String, ?library:String)
-	{
-		return getPath('$key.txt', TEXT, library);
-	}
+	inline public static function file(file:String, type:AssetType = TEXT, ?library:String):String
+		return resolve(file, type, library);
 
-	inline static public function xml(key:String, ?library:String)
-	{
-		return getPath('data/$key.xml', TEXT, library);
-	}
+	inline public static function txt(key:String, ?library:String):String
+		return resolve('$key.txt', TEXT, library);
 
-	inline static public function offsetTxt(key:String, ?library:String)
-	{
-		return getPath('images/characters/$key.txt', TEXT, library);
-	}
+	inline public static function xml(key:String, ?library:String):String
+		return resolve('data/$key.xml', TEXT, library);
 
-	inline static public function json(key:String, ?library:String)
-	{
-		return getPath('songs/$key.json', TEXT, library);
-	}
+	inline public static function json(key:String, ?library:String):String
+		return resolve('data/$key.json', TEXT, library);
 
-	inline static public function songJson(song:String, secondSong:String, ?library:String)
-		return getPath('songs/${song.toLowerCase()}/${secondSong.toLowerCase()}.json', TEXT, library);
+	inline public static function songJson(song:String, diff:String, ?library:String):String
+		return resolve('songs/${song.toLowerCase()}/${diff.toLowerCase()}.json', TEXT, library);
 
-	static public function sound(key:String, ?library:String)
-	{
-		return getPath('sounds/$key.$SOUND_EXT', SOUND, library);
-	}
+	inline public static function offsetTxt(key:String, ?library:String):String
+		return resolve('images/characters/$key.txt', TEXT, library);
 
-	inline static public function soundRandom(key:String, min:Int, max:Int, ?library:String)
-	{
+	inline public static function lua(key:String, ?library:String):String
+		return resolve('$key.lua', TEXT, library);
+
+	inline public static function hscript(key:String, ?library:String):String
+		return resolve('$key.hx', TEXT, library);
+
+	inline public static function shader(key:String, ?library:String):String
+		return resolve('shaders/$key.frag', TEXT, library);
+
+	inline public static function image(key:String, ?library:String):String
+		return resolve('images/$key.$IMAGE_EXT', IMAGE, library);
+
+	inline public static function sound(key:String, ?library:String):String
+		return resolve('sounds/$key.$SOUND_EXT', SOUND, library);
+
+	inline public static function soundRandom(key:String, min:Int, max:Int, ?library:String):String
 		return sound(key + FlxG.random.int(min, max), library);
+
+	inline public static function music(key:String, ?library:String):String
+		return resolve('music/$key.$SOUND_EXT', MUSIC, library);
+
+	public static function voices(song:String):String
+	{
+		var normal:String = resolve('songs/${song.toLowerCase()}/Voices.$SOUND_EXT', MUSIC, null);
+		if (fileExists(normal, MUSIC))
+			return normal;
+		return resolve('songs/${CoolUtil.swapSpaceDash(song.toLowerCase())}/Voices.$SOUND_EXT', MUSIC, null);
 	}
 
-	inline static public function music(key:String, ?library:String)
+	public static function inst(song:String):String
 	{
-		return getPath('music/$key.$SOUND_EXT', MUSIC, library);
+		var normal:String = resolve('songs/${song.toLowerCase()}/Inst.$SOUND_EXT', MUSIC, null);
+		if (fileExists(normal, MUSIC))
+			return normal;
+		return resolve('songs/${CoolUtil.swapSpaceDash(song.toLowerCase())}/Inst.$SOUND_EXT', MUSIC, null);
 	}
 
-	inline static public function voices(song:String)
-	{
-		var voicePath = 'songs/${song.toLowerCase()}/Voices.$SOUND_EXT';
-		if (!FileSystem.exists(getPath(voicePath, MUSIC, null)))
-		{
-			voicePath = 'songs/${CoolUtil.swapSpaceDash(song.toLowerCase())}/Voices.$SOUND_EXT';
-		}
-		return getPath(voicePath, MUSIC, null);
-	}
-
-	inline static public function inst(song:String)
-	{
-		var instPath = 'songs/${song.toLowerCase()}/Inst.$SOUND_EXT';
-		if (!FileSystem.exists(getPath(instPath, MUSIC, null)))
-		{
-			instPath = 'songs/${CoolUtil.swapSpaceDash(song.toLowerCase())}/Inst.$SOUND_EXT';
-		}
-		return getPath(instPath, MUSIC, null);
-	}
-
-	inline static public function image(key:String, ?library:String)
-	{
-		return getPath('images/$key.png', IMAGE, library);
-	}
-
-	inline static public function font(key:String)
-	{
+	inline public static function font(key:String):String
 		return 'assets/fonts/$key';
-	}
 
-	inline static public function getSparrowAtlas(key:String, ?library:String)
+	inline public static function video(key:String, ?library:String):String
+		return resolve('videos/$key.$VIDEO_EXT', BINARY, library);
+
+	public static function getSparrowAtlas(key:String, ?library:String):FlxAtlasFrames
 	{
-		return (FlxAtlasFrames.fromSparrow(image(key, library), File.getContent(file('images/$key.xml', library))));
+		var imgPath:String = image(key, library);
+		var xmlPath:String = resolve('images/$key.xml', TEXT, library);
+		return FlxAtlasFrames.fromSparrow(imgPath, getContent(xmlPath));
 	}
 
-	inline static public function getPackerAtlas(key:String, ?library:String)
+	public static function getPackerAtlas(key:String, ?library:String):FlxAtlasFrames
 	{
-		return (FlxAtlasFrames.fromSpriteSheetPacker(image(key, library), file('images/$key.txt', library)));
+		var imgPath:String = image(key, library);
+		var txtPath:String = resolve('images/$key.txt', TEXT, library);
+		return FlxAtlasFrames.fromSpriteSheetPacker(imgPath, txtPath);
 	}
 
-	
+	public static function getAsepriteAtlas(key:String, ?library:String):FlxAtlasFrames
+	{
+		var imgPath:String = image(key, library);
+		var jsonPath:String = resolve('images/$key.json', TEXT, library);
+		return FlxAtlasFrames.fromAseprite(imgPath, getContent(jsonPath));
+	}
 }
