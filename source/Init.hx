@@ -1,11 +1,11 @@
+package;
+
 import flixel.FlxG;
 import flixel.FlxState;
-import flixel.graphics.FlxGraphic;
 import flixel.input.keyboard.FlxKey;
 import meta.CoolUtil;
 import meta.InfoHud;
 import meta.data.Highscore;
-import meta.data.dependency.Discord;
 import meta.state.*;
 import meta.state.charting.*;
 import openfl.filters.BitmapFilter;
@@ -13,274 +13,343 @@ import openfl.filters.ColorMatrixFilter;
 
 using StringTools;
 
-/** 
-	Enumerator for settingtypes
-**/
-enum SettingTypes
+enum abstract SettingType(Int) from Int to Int
 {
-	Checkmark;
-	Selector;
+	var Checkmark = 0;
+	var Selector = 1;
+	var Numeric = 2;
+	var Offset = 3;
 }
 
-/**
-	This is the initialisation class. if you ever want to set anything before the game starts or call anything then this is probably your best bet.
-	A lot of this code is just going to be similar to the flixel templates' colorblind filters because I wanted to add support for those as I'll
-	most likely need them for skater, and I think it'd be neat if more mods were more accessible.
-**/
+enum abstract ForceMode(String) from String to String
+{
+	var Forced = 'forced';
+	var NotForced = 'not forced';
+}
+
+typedef SettingEntry =
+{
+	var defaultValue:Dynamic;
+	var type:SettingType;
+	var description:String;
+	var forceMode:ForceMode;
+	@:optional var options:Array<Dynamic>;
+}
+
+typedef FilterEntry =
+{
+	var filter:BitmapFilter;
+	@:optional var onUpdate:Void->Void;
+}
+
 class Init extends FlxState
 {
-	/*
-		Okay so here we'll set custom settings. As opposed to the previous options menu, everything will be handled in here with no hassle.
-		This will read what the second value of the key's array is, and then it will categorise it, telling the game which option to set it to.
-
-		0 - boolean, true or false checkmark
-		1 - choose string
-		2 - choose number (for fps so its low capped at 30)
-		3 - offsets, this is unused but it'd bug me if it were set to 0
-		might redo offset code since I didnt make it and it bugs me that it's hardcoded the the last part of the controls menu
-	 */
-	public static var FORCED = 'forced';
-	public static var NOT_FORCED = 'not forced';
-
-	public static var gameSettings:Map<String, Dynamic> = [
-		'Downscroll' => [
-			false,
-			Checkmark,
-			'Whether to have the strumline vertically flipped in gameplay.',
-			NOT_FORCED
-		],
-		'Auto Pause' => [true, Checkmark, '', NOT_FORCED],
-		'FPS Counter' => [true, Checkmark, 'Whether to display the FPS counter.', NOT_FORCED],
-		'Memory Counter' => [
-			true,
-			Checkmark,
-			'Whether to display approximately how much memory is being used.',
-			NOT_FORCED
-		],
-		'Debug Info' => [false, Checkmark, 'Whether to display information like your game state.', NOT_FORCED],
-		'Reduced Movements' => [
-			false,
-			Checkmark,
-			'Whether to reduce movements, like icons bouncing or beat zooms in gameplay.',
-			NOT_FORCED
-		],
-		'Stage Darkness' => [
-			Checkmark,
-			Selector,
-			'Darkens non-ui elements, useful if you find the characters and backgrounds distracting.',
-			NOT_FORCED
-		],
-		'Display Accuracy' => [true, Checkmark, 'Whether to display your accuracy on screen.', NOT_FORCED],
-		'Disable Antialiasing' => [
-			false,
-			Checkmark,
-			'Whether to disable Anti-aliasing. Helps improve performance in FPS.',
-			NOT_FORCED
-		],
-		'No Camera Note Movement' => [
-			false,
-			Checkmark,
-			'When enabled, left and right notes no longer move the camera.',
-			NOT_FORCED
-		],
-		'Use Forever Chart Editor' => [
-			false,
-			Checkmark,
-			'When enabled, uses the custom Forever Engine chart editor!',
-			NOT_FORCED
-		],
-		'Disable Note Splashes' => [
-			false,
-			Checkmark,
-			'Whether to disable note splashes in gameplay. Useful if you find them distracting.',
-			NOT_FORCED
-		],
-		// custom ones lol
-		'Offset' => [Checkmark, 3],
-		'Filter' => [
-			'none',
-			Selector,
-			'Choose a filter for colorblindness.',
-			NOT_FORCED,
-			['none', 'Deuteranopia', 'Protanopia', 'Tritanopia']
-		],
-		"UI Skin" => ['default', Selector, 'Choose a UI Skin for judgements, combo, etc.', NOT_FORCED, ''],
-		"Note Skin" => ['default', Selector, 'Choose a note skin.', NOT_FORCED, ''],
-		"Framerate Cap" => [120, Selector, 'Define your maximum FPS.', NOT_FORCED, ['']],
-		"Opaque Arrows" => [false, Checkmark, "Makes the arrows at the top of the screen opaque again.", NOT_FORCED],
-		"Opaque Holds" => [false, Checkmark, "Huh, why isnt the trail cut off?", NOT_FORCED],
-		'Ghost Tapping' => [
-			false,
-			Checkmark,
-			"Enables Ghost Tapping, allowing you to press inputs without missing.",
-			NOT_FORCED
-		],
-		'Centered Notefield' => [false, Checkmark, "Center the notes, disables the enemy's notes."],
-		"Custom Titlescreen" => [
-			false,
-			Checkmark,
-			"Enables the custom Forever Engine titlescreen! (only effective with a restart)",
-			FORCED
-		],
-		'Skip Text' => [
-			'freeplay only',
-			Selector,
-			'Decides whether to skip cutscenes and dialogue in gameplay. May be always, only in freeplay, or never.',
-			NOT_FORCED,
-			['never', 'freeplay only', 'always']
-		],
-		'Fixed Judgements' => [
-			false,
-			Checkmark,
-			"Fixes the judgements to the camera instead of to the world itself, making them easier to read.", 
-			NOT_FORCED
-		],
-		'Simply Judgements' => [
-			false,
-			Checkmark,
-			"Simplifies the judgement animations, displaying only one judgement / rating sprite at a time.",
-			NOT_FORCED
-		],
-
-
+	public static var gameSettings:Map<String, SettingEntry> = [
+		'Downscroll' => {
+			defaultValue: false,
+			type: Checkmark,
+			description: 'Whether to have the strumline vertically flipped in gameplay.',
+			forceMode: NotForced
+		},
+		'Auto Pause' => {
+			defaultValue: true,
+			type: Checkmark,
+			description: 'Pause the game when it loses focus.',
+			forceMode: NotForced
+		},
+		'FPS Counter' => {
+			defaultValue: true,
+			type: Checkmark,
+			description: 'Whether to display the FPS counter.',
+			forceMode: NotForced
+		},
+		'Memory Counter' => {
+			defaultValue: true,
+			type: Checkmark,
+			description: 'Whether to display approximately how much memory is being used.',
+			forceMode: NotForced
+		},
+		'Debug Info' => {
+			defaultValue: false,
+			type: Checkmark,
+			description: 'Whether to display information like your game state.',
+			forceMode: NotForced
+		},
+		'Reduced Movements' => {
+			defaultValue: false,
+			type: Checkmark,
+			description: 'Whether to reduce movements, like icons bouncing or beat zooms in gameplay.',
+			forceMode: NotForced
+		},
+		'Stage Darkness' => {
+			defaultValue: 0,
+			type: Numeric,
+			description: 'Darkens non-UI elements, useful if you find the characters and backgrounds distracting.',
+			forceMode: NotForced,
+			options: [0, 100]
+		},
+		'Display Accuracy' => {
+			defaultValue: true,
+			type: Checkmark,
+			description: 'Whether to display your accuracy on screen.',
+			forceMode: NotForced
+		},
+		'Disable Antialiasing' => {
+			defaultValue: false,
+			type: Checkmark,
+			description: 'Whether to disable anti-aliasing. Helps improve performance.',
+			forceMode: NotForced
+		},
+		'No Camera Note Movement' => {
+			defaultValue: false,
+			type: Checkmark,
+			description: 'When enabled, left and right notes no longer move the camera.',
+			forceMode: NotForced
+		},
+		'Use Forever Chart Editor' => {
+			defaultValue: false,
+			type: Checkmark,
+			description: 'When enabled, uses the custom Forever Engine chart editor.',
+			forceMode: NotForced
+		},
+		'Disable Note Splashes' => {
+			defaultValue: false,
+			type: Checkmark,
+			description: 'Whether to disable note splashes in gameplay.',
+			forceMode: NotForced
+		},
+		'Ghost Tapping' => {
+			defaultValue: false,
+			type: Checkmark,
+			description: 'Enables Ghost Tapping, allowing you to press inputs without missing.',
+			forceMode: NotForced
+		},
+		'Centered Notefield' => {
+			defaultValue: false,
+			type: Checkmark,
+			description: "Centers the notes and disables the opponent's notefield.",
+			forceMode: NotForced
+		},
+		'Opaque Arrows' => {
+			defaultValue: false,
+			type: Checkmark,
+			description: 'Makes the strum arrows fully opaque.',
+			forceMode: NotForced
+		},
+		'Opaque Holds' => {
+			defaultValue: false,
+			type: Checkmark,
+			description: 'Disables the hold trail cutoff effect.',
+			forceMode: NotForced
+		},
+		'Fixed Judgements' => {
+			defaultValue: false,
+			type: Checkmark,
+			description: 'Fixes judgements to the camera instead of world space.',
+			forceMode: NotForced
+		},
+		'Simply Judgements' => {
+			defaultValue: false,
+			type: Checkmark,
+			description: 'Displays only one judgement sprite at a time.',
+			forceMode: NotForced
+		},
+		'Skip Text' => {
+			defaultValue: 'freeplay only',
+			type: Selector,
+			description: 'Decides whether to skip cutscenes and dialogue in gameplay.',
+			forceMode: NotForced,
+			options: ['never', 'freeplay only', 'always']
+		},
+		'Filter' => {
+			defaultValue: 'none',
+			type: Selector,
+			description: 'Choose a colorblindness filter.',
+			forceMode: NotForced,
+			options: ['none', 'Deuteranopia', 'Protanopia', 'Tritanopia']
+		},
+		'UI Skin' => {
+			defaultValue: 'default',
+			type: Selector,
+			description: 'Choose a UI skin for judgements, combo, etc.',
+			forceMode: NotForced,
+			options: []
+		},
+		'Note Skin' => {
+			defaultValue: 'default',
+			type: Selector,
+			description: 'Choose a note skin.',
+			forceMode: NotForced,
+			options: []
+		},
+		'Framerate Cap' => {
+			defaultValue: #if mobile 60 #else 120 #end,
+			type: Numeric,
+			description: 'Define your maximum FPS.',
+			forceMode: NotForced,
+			options: [30, 360]
+		},
+		'Offset' => {
+			defaultValue: 0,
+			type: Offset,
+			description: 'Audio sync offset in milliseconds.',
+			forceMode: NotForced
+		},
+		'Custom Titlescreen' => {
+			defaultValue: false,
+			type: Checkmark,
+			description: 'Enables the custom Forever Engine titlescreen. Requires restart.',
+			forceMode: Forced
+		},
 	];
 
 	public static var trueSettings:Map<String, Dynamic> = [];
-	public static var settingsDescriptions:Map<String, String> = [];
 
 	public static var gameControls:Map<String, Dynamic> = [
-		'UP' => [[FlxKey.UP, W], 2],
-		'DOWN' => [[FlxKey.DOWN, S], 1],
-		'LEFT' => [[FlxKey.LEFT, A], 0],
-		'RIGHT' => [[FlxKey.RIGHT, D], 3],
+		'UP'     => [[FlxKey.UP, W], 2],
+		'DOWN'   => [[FlxKey.DOWN, S], 1],
+		'LEFT'   => [[FlxKey.LEFT, A], 0],
+		'RIGHT'  => [[FlxKey.RIGHT, D], 3],
 		'ACCEPT' => [[FlxKey.SPACE, Z, FlxKey.ENTER], 4],
-		'BACK' => [[FlxKey.BACKSPACE, X, FlxKey.ESCAPE], 5],
-		'PAUSE' => [[FlxKey.ENTER, P], 6],
-		'RESET' => [[R, null], 7]
+		'BACK'   => [[FlxKey.BACKSPACE, X, FlxKey.ESCAPE], 5],
+		'PAUSE'  => [[FlxKey.ENTER, P], 6],
+		'RESET'  => [[R, null], 7],
 	];
 
-	public static var filters:Array<BitmapFilter> = []; // the filters the game has active
-	/// initalise filters here
-	public static var gameFilters:Map<String, {filter:BitmapFilter, ?onUpdate:Void->Void}> = [
-		"Deuteranopia" => {
-			var matrix:Array<Float> = [
-				0.43, 0.72, -.15, 0, 0,
-				0.34, 0.57, 0.09, 0, 0,
-				-.02, 0.03,    1, 0, 0,
-				   0,    0,    0, 1, 0,
-			];
-			{filter: new ColorMatrixFilter(matrix)}
+	public static var filters:Array<BitmapFilter> = [];
+
+	public static var gameFilters:Map<String, FilterEntry> = [
+		'Deuteranopia' => {
+			filter: new ColorMatrixFilter([
+				0.43,  0.72, -0.15, 0, 0,
+				0.34,  0.57,  0.09, 0, 0,
+				-0.02, 0.03,  1.00, 0, 0,
+				0,     0,     0,    1, 0,
+			])
 		},
-		"Protanopia" => {
-			var matrix:Array<Float> = [
-				0.20, 0.99, -.19, 0, 0,
-				0.16, 0.79, 0.04, 0, 0,
-				0.01, -.01,    1, 0, 0,
-				   0,    0,    0, 1, 0,
-			];
-			{filter: new ColorMatrixFilter(matrix)}
+		'Protanopia' => {
+			filter: new ColorMatrixFilter([
+				0.20,  0.99, -0.19, 0, 0,
+				0.16,  0.79,  0.04, 0, 0,
+				0.01, -0.01,  1.00, 0, 0,
+				0,     0,     0,    1, 0,
+			])
 		},
-		"Tritanopia" => {
-			var matrix:Array<Float> = [
-				0.97, 0.11, -.08, 0, 0,
-				0.02, 0.82, 0.16, 0, 0,
-				0.06, 0.88, 0.18, 0, 0,
-				   0,    0,    0, 1, 0,
-			];
-			{filter: new ColorMatrixFilter(matrix)}
-		}
+		'Tritanopia' => {
+			filter: new ColorMatrixFilter([
+				0.97,  0.11, -0.08, 0, 0,
+				0.02,  0.82,  0.16, 0, 0,
+				0.06,  0.88,  0.18, 0, 0,
+				0,     0,     0,    1, 0,
+			])
+		},
 	];
 
 	override public function create():Void
 	{
-		FlxG.save.bind('foreverengine-options');
+		super.create();
+
+		FlxG.save.bind('foreverextended-options');
 		Highscore.load();
 
 		loadSettings();
 		loadControls();
+		applyStartupSettings();
 
-		#if !html5
-		Main.updateFramerate(trueSettings.get("Framerate Cap"));
-		#end
-
-		// apply saved filters
-		FlxG.game.setFilters(filters);
-
-		// Some additional changes to default HaxeFlixel settings, both for ease of debugging and usability.
-		FlxG.fixedTimestep = false; // This ensures that the game is not tied to the FPS
-		FlxG.mouse.useSystemCursor = true; // Use system cursor because it's prettier
-		FlxG.mouse.visible = false; // Hide mouse on start
-
-		// Main.switchState(this, new TestState());
 		gotoTitleScreen();
 	}
 
-	private function gotoTitleScreen()
+	private function applyStartupSettings():Void
 	{
-		if (trueSettings.get("Custom Titlescreen"))
-			Main.switchState(this, new CustomTitlescreen());
-		else
-			Main.switchState(this, new TitleState());
+		FlxG.fixedTimestep = false;
+		FlxG.mouse.useSystemCursor = true;
+		FlxG.mouse.visible = false;
+		FlxG.autoPause = getSetting('Auto Pause');
+
+		#if !html5
+		Main.updateFramerate(getSetting('Framerate Cap'));
+		#end
+
+		applyFilters();
+	}
+
+	private function gotoTitleScreen():Void
+	{
+		var state:FlxState = getSetting('Custom Titlescreen') ? new CustomTitlescreen() : new TitleState();
+		Main.switchState(this, state);
+	}
+
+	public static function getSetting<T>(key:String):T
+		return cast trueSettings.get(key);
+
+	public static function setSetting(key:String, value:Dynamic):Void
+	{
+		trueSettings.set(key, value);
+		saveSettings();
 	}
 
 	public static function loadSettings():Void
 	{
-		// set the true settings array
-		// only the first variable will be saved! the rest are for the menu stuffs
+		for (key => entry in gameSettings)
+			trueSettings.set(key, entry.defaultValue);
 
-		// IF YOU WANT TO SAVE MORE THAN ONE VALUE MAKE YOUR VALUE AN ARRAY INSTEAD
-		for (setting in gameSettings.keys())
-			trueSettings.set(setting, gameSettings.get(setting)[0]);
-
-		// NEW SYSTEM, INSTEAD OF REPLACING THE WHOLE THING I REPLACE EXISTING KEYS
-		// THAT WAY IT DOESNT HAVE TO BE DELETED IF THERE ARE SETTINGS CHANGES
 		if (FlxG.save.data.settings != null)
 		{
-			var settingsMap:Map<String, Dynamic> = FlxG.save.data.settings;
-			for (singularSetting in settingsMap.keys())
-				if (gameSettings.get(singularSetting) != null && gameSettings.get(singularSetting)[3] != FORCED)
-					trueSettings.set(singularSetting, FlxG.save.data.settings.get(singularSetting));
+			var saved:Map<String, Dynamic> = FlxG.save.data.settings;
+			for (key => value in saved)
+			{
+				var entry = gameSettings.get(key);
+				if (entry != null && entry.forceMode != Forced)
+					trueSettings.set(key, value);
+			}
 		}
 
-		// lemme fix that for you
-		if (!Std.isOfType(trueSettings.get("Framerate Cap"), Int)
-			|| trueSettings.get("Framerate Cap") < 30
-			|| trueSettings.get("Framerate Cap") > 360)
-			trueSettings.set("Framerate Cap", 30);
-
-		if (!Std.isOfType(trueSettings.get("Stage Darkness"), Int)
-			|| trueSettings.get("Stage Darkness") < 0
-			|| trueSettings.get("Stage Darkness") > 100)
-			trueSettings.set("Stage Darkness", 0);
-
-		// 'hardcoded' ui skins
-		gameSettings.get("UI Skin")[4] = CoolUtil.returnAssetsLibrary('UI');
-		if (!gameSettings.get("UI Skin")[4].contains(trueSettings.get("UI Skin")))
-			trueSettings.set("UI Skin", 'default');
-		gameSettings.get("Note Skin")[4] = CoolUtil.returnAssetsLibrary('noteskins/notes');
-		if (!gameSettings.get("Note Skin")[4].contains(trueSettings.get("Note Skin")))
-			trueSettings.set("Note Skin", 'default');
-
+		sanitizeSettings();
+		resolveSkinnableOptions();
 		saveSettings();
-
 		updateAll();
+	}
+
+	static function sanitizeSettings():Void
+	{
+		var fpsVal = getSetting('Framerate Cap');
+		if (!Std.isOfType(fpsVal, Int) || fpsVal < 30 || fpsVal > 360)
+			trueSettings.set('Framerate Cap', #if mobile 60 #else 120 #end);
+
+		var darknessVal = getSetting('Stage Darkness');
+		if (!Std.isOfType(darknessVal, Int) || darknessVal < 0 || darknessVal > 100)
+			trueSettings.set('Stage Darkness', 0);
+
+		var offsetVal = getSetting('Offset');
+		if (!Std.isOfType(offsetVal, Int))
+			trueSettings.set('Offset', 0);
+	}
+
+	static function resolveSkinnableOptions():Void
+	{
+		var uiSkins:Array<String> = CoolUtil.returnAssetsLibrary('UI');
+		gameSettings.get('UI Skin').options = uiSkins;
+		if (!uiSkins.contains(getSetting('UI Skin')))
+			trueSettings.set('UI Skin', 'default');
+
+		var noteSkins:Array<String> = CoolUtil.returnAssetsLibrary('noteskins/notes');
+		gameSettings.get('Note Skin').options = noteSkins;
+		if (!noteSkins.contains(getSetting('Note Skin')))
+			trueSettings.set('Note Skin', 'default');
 	}
 
 	public static function loadControls():Void
 	{
-		if ((FlxG.save.data.gameControls != null) && (Lambda.count(FlxG.save.data.gameControls) == Lambda.count(gameControls)))
-			gameControls = FlxG.save.data.gameControls;
-
+		var saved = FlxG.save.data.gameControls;
+		if (saved != null && Lambda.count(saved) == Lambda.count(gameControls))
+			gameControls = saved;
 		saveControls();
 	}
 
 	public static function saveSettings():Void
 	{
-		// ez save lol
 		FlxG.save.data.settings = trueSettings;
 		FlxG.save.flush();
-
-		updateAll();
 	}
 
 	public static function saveControls():Void
@@ -289,28 +358,36 @@ class Init extends FlxState
 		FlxG.save.flush();
 	}
 
-	public static function updateAll()
+	public static function applyFilters():Void
 	{
-		InfoHud.updateDisplayInfo(trueSettings.get('FPS Counter'), trueSettings.get('Debug Info'), trueSettings.get('Memory Counter'));
-
-		#if !html5
-		Main.updateFramerate(trueSettings.get("Framerate Cap"));
-		#end
-
-		///*
 		filters = [];
-		FlxG.game.setFilters(filters);
 
-		var theFilter:String = trueSettings.get('Filter');
-		if (gameFilters.get(theFilter) != null)
+		var filterName:String = getSetting('Filter');
+		var entry = gameFilters.get(filterName);
+		if (entry != null)
 		{
-			var realFilter = gameFilters.get(theFilter).filter;
-
-			if (realFilter != null)
-				filters.push(realFilter);
+			if (entry.onUpdate != null)
+				entry.onUpdate();
+			filters.push(entry.filter);
 		}
 
 		FlxG.game.setFilters(filters);
-		// */
+	}
+
+	public static function updateAll():Void
+	{
+		InfoHud.updateDisplayInfo(
+			getSetting('FPS Counter'),
+			getSetting('Debug Info'),
+			getSetting('Memory Counter')
+		);
+
+		FlxG.autoPause = getSetting('Auto Pause');
+
+		#if !html5
+		Main.updateFramerate(getSetting('Framerate Cap'));
+		#end
+
+		applyFilters();
 	}
 }
