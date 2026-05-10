@@ -1,24 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
 <project>
 
-	<app title="Friday Night Funkin' Forever Extended" file="ForeverExtended" packageName="com.brenninho.fe"
-		package="com.brenninbo.fe" main="Main" version="0.2.7.1" company="Brenninho" />
+	<!-- ======== App ======== -->
+
+	<app title="Friday Night Funkin': Forever Extended" file="ForeverExtended"
+		packageName="com.brenninho.foreverextended" package="com.brenninho.foreverextended"
+		main="Main" version="0.2.7.1" company="Brenninho" />
+
+	<app title="FNF: Forever Extended" if="mobile" />
 
 	<app preloader="flixel.system.FlxPreloader" />
 
 	<set name="SWF_VERSION" value="11.8" />
 
+	<!-- ======== Window ======== -->
+
 	<window width="1280" height="720" fps="60" background="#000000" hardware="true" vsync="false" />
 	<window if="html5" resizable="true" />
-	<window if="desktop" orientation="landscape" fullscreen="false" resizable="true" />
-	<window if="mobile" orientation="landscape" fullscreen="true" width="0" height="0" />
+	<window if="desktop" orientation="landscape" fullscreen="false" resizable="true" allow-shaders="true" />
+	<window if="mobile" orientation="landscape" fullscreen="true" width="0" height="0" allow-shaders="true" />
+
+	<!-- ======== Build Dirs ======== -->
 
 	<set name="BUILD_DIR" value="export/debug" if="debug" />
 	<set name="BUILD_DIR" value="export/release" unless="debug" />
 
+	<!-- ======== Sources & Assets ======== -->
+
 	<source path="source" />
+
 	<assets path="assets" rename="assets" />
+	<assets path="assets/images" rename="assets/images" include="*.png|*.jpg|*.atlas" />
+	<assets path="assets/sounds" rename="assets/sounds" include="*.ogg" if="!web" />
+	<assets path="assets/sounds" rename="assets/sounds" include="*.mp3" if="web" />
+	<assets path="assets/music" rename="assets/music" include="*.ogg" if="!web" />
+	<assets path="assets/music" rename="assets/music" include="*.mp3" if="web" />
+	<assets path="assets/songs" rename="assets/songs" include="*.ogg" if="!web" />
+	<assets path="assets/songs" rename="assets/songs" include="*.mp3" if="web" />
+	<assets path="assets/data" rename="assets/data" include="*.json|*.xml|*.txt|*.hx|*.lua" />
+	<assets path="assets/fonts" rename="assets/fonts" />
+	<assets path="assets/videos" rename="assets/videos" include="*.mp4" if="desktop" />
+	<assets path="assets/shaders" rename="assets/shaders" include="*.frag|*.vert" />
+
 	<assets path="FE-CrashDialog.exe" type="template" if="windows release" />
+
+	<!-- ======== Libraries ======== -->
 
 	<haxelib name="flixel" />
 	<haxelib name="flixel-addons" />
@@ -27,30 +53,50 @@
 	<haxelib name="polymod" />
 	<haxelib name="discord_rpc" if="desktop" />
 
+	<!-- ======== Haxe Defines ======== -->
+
 	<haxedef name="FLX_NO_MOUSE" if="mobile" />
 	<haxedef name="FLX_NO_KEYBOARD" if="mobile" />
 	<haxedef name="FLX_NO_TOUCH" if="desktop" />
+	<haxedef name="FLX_NO_GAMEPAD" if="mobile" />
 	<haxedef name="FLX_NO_FOCUS_LOST_SCREEN" />
 	<haxedef name="FLX_NO_DEBUG" unless="debug" />
 	<haxedef name="NAPE_RELEASE_BUILD" unless="debug" />
 	<haxedef name="HXCPP_CHECK_POINTER" if="release" />
 	<haxedef name="HXCPP_STACK_LINE" if="release" />
+	<haxedef name="HXCPP_STACK_TRACE" if="release" />
+
+	<!-- ======== Android ======== -->
 
 	<permission name="android.permission.INTERNET" if="android" />
 	<permission name="android.permission.READ_EXTERNAL_STORAGE" if="android" />
 	<permission name="android.permission.WRITE_EXTERNAL_STORAGE" if="android" />
 	<permission name="android.permission.VIBRATE" if="android" />
+	<permission name="android.permission.WAKE_LOCK" if="android" />
+	<permission name="android.permission.MANAGE_EXTERNAL_STORAGE" if="android" />
 
 	<android target-sdk-version="34" minimum-sdk-version="21" if="android" />
+
 	<architecture name="arm64" if="android" />
 	<architecture name="armv7" if="android" />
+	<architecture name="x86" if="android" />
+	<architecture name="x86_64" if="android" />
 
-	<icon path="art/icon16.png" size="16" />
-	<icon path="art/icon32.png" size="32" />
-	<icon path="art/icon64.png" size="64" />
-	<icon path="art/icon128.png" size="128" />
-	<icon path="art/icon256.png" size="256" />
-	<icon path="art/icon512.png" size="512" />
+	<dependency name="androidx.core:core:1.10.1" if="android" />
+
+	<!-- ======== iOS ======== -->
+
+	<architecture name="arm64" if="ios" />
+	<window if="ios" orientation="landscape" fullscreen="true" width="0" height="0" allow-shaders="true" />
+
+	<!-- ======== Icons ======== -->
+
+	<icon path="art/icon16.png"   size="16"  />
+	<icon path="art/icon32.png"   size="32"  />
+	<icon path="art/icon64.png"   size="64"  />
+	<icon path="art/icon128.png"  size="128" />
+	<icon path="art/icon256.png"  size="256" />
+	<icon path="art/icon512.png"  size="512" />
 	<icon path="art/iconOG.png" />
 
 </project>
